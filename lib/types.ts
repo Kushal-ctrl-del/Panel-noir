@@ -5,7 +5,12 @@ export interface PanelistResponse {
   name: string;
   role: string;
   shape: string;
-  text: string;
+  // Structured fields replacing free prose — forces the model into a
+  // scannable format instead of paragraph answers, and lets the UI
+  // render each field as its own labeled element.
+  take: string;
+  concern_or_praise: string;
+  question: string;
   failed?: boolean;
   rateLimited?: boolean;
 }

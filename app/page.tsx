@@ -2,13 +2,34 @@
 
 import { useState } from "react";
 import { ShapeIcon } from "@/components/ShapeIcon";
-import type { PanelResult } from "@/app/api/panel/route";
+import type { PanelResult, PanelistResponse } from "@/app/api/panel/route";
+
+// Flattens a panelist's structured fields into a single readable line
+// for the transcript log — the log itself stays plain text since it's
+// just a running record, only the live panelist cards need the fields
+// rendered as separate UI elements.
+function flattenForLog(p: PanelistResponse): string {
+  if (p.failed) return p.take || "(no response)";
+  const parts = [p.take];
+  if (p.concern_or_praise) parts.push(p.concern_or_praise);
+  if (p.question) parts.push(p.question);
+  return parts.filter(Boolean).join(" — ");
+}
 
 const SHAPE_COLORS: Record<string, string> = {
   triangle: "#FF2E7E",
   square: "#E0B84D",
   circle: "#00C2A8",
 };
+
+// Static display info matching lib/personas.ts, used only to render
+// per-panelist skeleton cards before the real API response arrives —
+// keeps the loading state feeling alive instead of one generic spinner.
+const PANELIST_META = [
+  { id: "investor", name: "Skeptical investor", role: "Cares about the numbers", shape: "triangle" },
+  { id: "budget_founder", name: "Budget-conscious founder", role: "Wants predictable cost", shape: "square" },
+  { id: "early_adopter", name: "Early adopter", role: "Wants proof before committing", shape: "circle" },
+];
 
 // Stance per panelist now comes directly from the moderator's single
 // LLM call (see app/api/panel/route.ts) — this guarantees the status
@@ -46,7 +67,7 @@ export default function Home() {
 
       const data: PanelResult = await res.json();
       setResult(data);
-      setHistory(data.panelists.map((p) => ({ speaker: p.name, text: p.text })));
+      setHistory(data.panelists.map((p) => ({ speaker: p.name, text: flattenForLog(p) })));
     } catch (err) {
       setError(err instanceof Error ? err.message : "The panel couldn't convene. Try again.");
     } finally {
@@ -81,7 +102,7 @@ export default function Home() {
       setHistory((prev) => [
         ...prev,
         { speaker: "You", text: argument },
-        ...data.panelists.map((p) => ({ speaker: p.name, text: p.text })),
+        ...data.panelists.map((p) => ({ speaker: p.name, text: flattenForLog(p) })),
       ]);
       setUserArgument("");
     } catch (err) {
@@ -94,6 +115,7 @@ export default function Home() {
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", paddingBottom: 90 }}>
       <header
+        className="panel-header"
         style={{
           background: "var(--pink)",
           padding: "14px 24px",
@@ -126,6 +148,7 @@ export default function Home() {
           </span>
         </div>
         <span
+          className="panel-header-count"
           style={{
             fontSize: 11,
             color: "var(--void)",
@@ -203,6 +226,17 @@ export default function Home() {
           </div>
         )}
 
+        {loading && !result && (
+          <>
+            <SectionTag label="Players" />
+            <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 44 }}>
+              {PANELIST_META.map((meta, i) => (
+                <SkeletonCard key={meta.id} meta={meta} index={i} />
+              ))}
+            </div>
+          </>
+        )}
+
         {result && (
           <>
             <SectionTag label="Players" />
@@ -215,9 +249,10 @@ export default function Home() {
                     key={p.id}
                     style={{
                       background: "var(--void-raised)",
-                      border: "1px solid var(--line)",
+                      border: p.failed ? "1px dashed var(--line)" : "1px solid var(--line)",
                       padding: 20,
                       position: "relative",
+                      opacity: p.failed ? 0.7 : 1,
                     }}
                   >
                     <div
@@ -235,7 +270,7 @@ export default function Home() {
                       {String(i + 1).padStart(2, "0")}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                      <ShapeIcon shape={p.shape} color={color} />
+                      <ShapeIcon shape={p.shape} color={p.failed ? "var(--dim)" : color} />
                       <div>
                         <div
                           style={{
@@ -251,10 +286,87 @@ export default function Home() {
                         <div style={{ fontSize: 11, color: "var(--dim)" }}>{p.role}</div>
                       </div>
                     </div>
-                    <StatusTag lean={lean} />
-                    <div style={{ fontSize: 13, lineHeight: 1.7, color: "#C8C8C8", maxWidth: 520 }}>
-                      {p.text}
-                    </div>
+                    {p.failed ? (
+                      <div
+                        style={{
+                          display: "inline-block",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                          padding: "4px 10px",
+                          marginBottom: 12,
+                          background: "var(--line)",
+                          color: "var(--dim)",
+                        }}
+                      >
+                        {p.rateLimited ? "Rate limited" : "No response"}
+                      </div>
+                    ) : (
+                      <StatusTag lean={lean} />
+                    )}
+
+                    {p.failed ? (
+                      <div style={{ fontSize: 13, lineHeight: 1.7, color: "var(--dim)", maxWidth: 520 }}>
+                        {p.take || "This panelist didn't respond — the others still weighed in."}
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 520 }}>
+                        {/* The "take" is the headline — biggest, boldest,
+                            scannable in one glance. This is what fixes the
+                            long-paragraph problem: it's a forced short field,
+                            not a sentence the model can pad out. */}
+                        <div
+                          style={{
+                            fontFamily: "Archivo, sans-serif",
+                            fontSize: 15,
+                            fontWeight: 800,
+                            color: "var(--paper)",
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          "{p.take}"
+                        </div>
+                        {p.concern_or_praise && (
+                          <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                            <span
+                              style={{
+                                fontSize: 9,
+                                fontWeight: 700,
+                                letterSpacing: "0.06em",
+                                textTransform: "uppercase",
+                                color: "var(--dim)",
+                                flexShrink: 0,
+                                width: 70,
+                              }}
+                            >
+                              {lean === "negative" ? "Concern" : lean === "positive" ? "Praise" : "Take"}
+                            </span>
+                            <span style={{ fontSize: 12, lineHeight: 1.5, color: "#C8C8C8" }}>
+                              {p.concern_or_praise}
+                            </span>
+                          </div>
+                        )}
+                        {p.question && (
+                          <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                            <span
+                              style={{
+                                fontSize: 9,
+                                fontWeight: 700,
+                                letterSpacing: "0.06em",
+                                textTransform: "uppercase",
+                                color: "var(--teal)",
+                                flexShrink: 0,
+                                width: 70,
+                              }}
+                            >
+                              Asks
+                            </span>
+                            <span style={{ fontSize: 12, lineHeight: 1.5, color: "#C8C8C8" }}>{p.question}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -280,7 +392,7 @@ export default function Home() {
               >
                 Verdict gate
               </div>
-              <div style={{ display: "flex", height: 28, border: "1px solid var(--line)", marginBottom: 14 }}>
+              <div style={{ display: "flex", height: 28, border: "1px solid var(--line)", marginBottom: 10, overflow: "hidden" }}>
                 <div
                   style={{
                     width: `${result.moderator.against_pct}%`,
@@ -291,9 +403,11 @@ export default function Home() {
                     justifyContent: "center",
                     fontSize: 11,
                     fontWeight: 700,
+                    overflow: "hidden",
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  {result.moderator.against_pct}%
+                  {result.moderator.against_pct >= 12 ? `${result.moderator.against_pct}%` : ""}
                 </div>
                 <div
                   style={{
@@ -305,9 +419,11 @@ export default function Home() {
                     justifyContent: "center",
                     fontSize: 11,
                     fontWeight: 700,
+                    overflow: "hidden",
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  {result.moderator.mixed_pct}%
+                  {result.moderator.mixed_pct >= 12 ? `${result.moderator.mixed_pct}%` : ""}
                 </div>
                 <div
                   style={{
@@ -319,10 +435,21 @@ export default function Home() {
                     justifyContent: "center",
                     fontSize: 11,
                     fontWeight: 700,
+                    overflow: "hidden",
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  {result.moderator.for_pct}%
+                  {result.moderator.for_pct >= 12 ? `${result.moderator.for_pct}%` : ""}
                 </div>
+              </div>
+              {/* Legend below the bar guarantees every percentage is
+                  readable even when a segment is too narrow to hold
+                  its own label — the bar above hides labels under 12%
+                  to avoid clipped/overflowing text on small screens. */}
+              <div style={{ display: "flex", gap: 16, marginBottom: 14, fontSize: 10, color: "var(--dim)", flexWrap: "wrap" }}>
+                <span>Against — {result.moderator.against_pct}%</span>
+                <span>Mixed — {result.moderator.mixed_pct}%</span>
+                <span>For — {result.moderator.for_pct}%</span>
               </div>
               <div style={{ fontFamily: "Archivo, sans-serif", fontSize: 16, fontWeight: 800 }}>
                 {result.moderator.verdict}
@@ -396,6 +523,73 @@ export default function Home() {
           </>
         )}
       </main>
+    </div>
+  );
+}
+
+function SkeletonCard({
+  meta,
+  index,
+}: {
+  meta: { id: string; name: string; role: string; shape: string };
+  index: number;
+}) {
+  const color = SHAPE_COLORS[meta.shape] || "#FFFFFF";
+  return (
+    <div
+      style={{
+        background: "var(--void-raised)",
+        border: "1px solid var(--line)",
+        padding: 20,
+        position: "relative",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+        <ShapeIcon shape={meta.shape} color={color} />
+        <div>
+          <div
+            style={{
+              fontFamily: "Archivo, sans-serif",
+              fontWeight: 800,
+              fontSize: 14,
+              textTransform: "uppercase",
+              letterSpacing: "0.02em",
+            }}
+          >
+            {meta.name}
+          </div>
+          <div style={{ fontSize: 11, color: "var(--dim)" }}>{meta.role}</div>
+        </div>
+      </div>
+      {/* Staggered pulse bars stand in for the response text — the
+          animation-delay offset per index gives the impression each
+          panelist is "thinking" independently rather than one blob
+          loading all at once. */}
+      <div
+        style={{
+          height: 12,
+          width: "90%",
+          background: "var(--line)",
+          marginBottom: 8,
+          animation: "pulse 1.4s ease-in-out infinite",
+          animationDelay: `${index * 0.2}s`,
+        }}
+      />
+      <div
+        style={{
+          height: 12,
+          width: "60%",
+          background: "var(--line)",
+          animation: "pulse 1.4s ease-in-out infinite",
+          animationDelay: `${index * 0.2 + 0.1}s`,
+        }}
+      />
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 0.35; }
+          50% { opacity: 0.8; }
+        }
+      `}</style>
     </div>
   );
 }
