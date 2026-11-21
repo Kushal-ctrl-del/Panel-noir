@@ -24,14 +24,14 @@ const STRUCTURED_OUTPUT_CONTRACT = `
 
 Output ONLY a JSON object (no other text, no markdown fences) with this exact shape:
 {
-  "take": string (max 12 words — your one-line gut reaction, punchy, not a full sentence if you can help it),
-  "concern_or_praise": string (max 20 words — your single biggest concern OR what specifically works, pick whichever is more true),
-  "question": string (max 15 words — one sharp question you'd actually ask, or empty string "" if you have none)
+  "take": string (max 18 words — your gut reaction. Punchy, not a hedge, but a full clause, not a fragment.),
+  "concern_or_praise": string (max 32 words — your single biggest concern OR what specifically works, pick whichever is more true. Must include at least one concrete number, name, or specific detail pulled from the idea — not a generic statement),
+  "question": string (max 20 words — one sharp question you'd actually ask, or empty string "" if you have none)
 }
 
 Rules:
 - Every field is short. This is a live panel, not an essay — nobody reads a paragraph on stage.
-- Be concrete and reference specifics from the idea given to you. Never write something that could apply to any idea.
+- Short does not mean vague. Every field must reference a specific number, timeframe, or detail from the idea given to you — never a generic statement that could apply to any idea.
 - "question" can be empty string "" if you're fully convinced either way and have nothing left to ask.`;
 
 export const PERSONAS: Persona[] = [

@@ -18,7 +18,5 @@ export function getGroqClient(): Groq {
   return client;
 }
 
-// Llama 3.3 70B on Groq — good balance of speed and reasoning quality
-// for short persona responses. Swap here if you want to try other
-// Groq-hosted models (e.g. llama-3.1-8b-instant for even faster/cheaper).
-export const GROQ_MODEL = "llama-3.3-70b-versatile";
+// Fast, high-quality reasoning and structured JSON output supported by Groq.
+export const GROQ_MODEL = "qwen/qwen3.8-27b";

@@ -35,6 +35,19 @@ const PANELIST_META = [
 // LLM call (see app/api/panel/route.ts) — this guarantees the status
 // tags and the verdict gate percentages can never contradict each
 // other, since they're both derived from the same judgment.
+// Shared keyframe for staggered card entrance — cards fade in and
+// slide up slightly, one after another, instead of all appearing at
+// once. Kept as a single injected style tag so it only loads once.
+function CardEntranceStyles() {
+  return (
+    <style>{`
+      @keyframes cardEnter {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    `}</style>
+  );
+}
 
 export default function Home() {
   const [topic, setTopic] = useState("");

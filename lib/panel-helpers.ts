@@ -59,7 +59,7 @@ export async function callPersonaSafely(
       // bug seen in long multi-turn conversations, on top of the explicit
       // prompt instruction not to restate prior statements.
       frequency_penalty: options?.frequencyPenalty ?? 0,
-      max_tokens: 250,
+      max_tokens: 350,
       response_format: { type: "json_object" },
     });
 
