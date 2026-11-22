@@ -137,7 +137,7 @@ export default function Home() {
           justifyContent: "space-between",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }} aria-hidden="true">
           <svg width="16" height="16" viewBox="0 0 16 16">
             <circle cx="8" cy="8" r="7" fill="#0D0D0D" />
           </svg>
@@ -174,8 +174,10 @@ export default function Home() {
       </header>
 
       <main style={{ padding: "36px 24px 0" }}>
-        <div
+        <label
+          htmlFor="pitch-topic"
           style={{
+            display: "block",
             fontSize: 11,
             color: "var(--dim)",
             letterSpacing: "0.14em",
@@ -185,9 +187,11 @@ export default function Home() {
           }}
         >
           Bring an idea
-        </div>
+        </label>
 
         <textarea
+          id="pitch-topic"
+          aria-label="Describe the idea, pitch, or decision you want the panel to react to"
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
           placeholder="Describe the idea, pitch, or decision you want the panel to react to..."
@@ -208,6 +212,7 @@ export default function Home() {
         <button
           onClick={runPanel}
           disabled={loading || !topic.trim()}
+          aria-label="Convene the panel of three AI advisors"
           style={{
             background: loading ? "var(--line)" : "var(--pink)",
             color: loading ? "var(--dim)" : "var(--void)",
@@ -226,6 +231,7 @@ export default function Home() {
 
         {error && (
           <div
+            role="alert"
             style={{
               border: "1px solid var(--pink)",
               background: "var(--pink-dim)",
@@ -240,18 +246,18 @@ export default function Home() {
         )}
 
         {loading && !result && (
-          <>
+          <div role="status" aria-live="polite">
             <SectionTag label="Players" />
             <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 44 }}>
               {PANELIST_META.map((meta, i) => (
                 <SkeletonCard key={meta.id} meta={meta} index={i} />
               ))}
             </div>
-          </>
+          </div>
         )}
 
         {result && (
-          <>
+          <div role="region" aria-label="Panel Results and Deliberation" aria-live="polite">
             <SectionTag label="Players" />
             <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 44 }}>
               {result.panelists.map((p, i) => {
@@ -386,6 +392,8 @@ export default function Home() {
             </div>
 
             <div
+              role="region"
+              aria-label="Consensus Verdict Gate"
               style={{
                 border: "1px solid var(--line)",
                 background: "var(--void-raised)",
@@ -405,7 +413,14 @@ export default function Home() {
               >
                 Verdict gate
               </div>
-              <div style={{ display: "flex", height: 28, border: "1px solid var(--line)", marginBottom: 10, overflow: "hidden" }}>
+              <div
+                role="progressbar"
+                aria-label="Panel vote split"
+                aria-valuenow={result.moderator.for_pct}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                style={{ display: "flex", height: 28, border: "1px solid var(--line)", marginBottom: 10, overflow: "hidden" }}
+              >
                 <div
                   style={{
                     width: `${result.moderator.against_pct}%`,
@@ -498,8 +513,23 @@ export default function Home() {
               ))}
             </div>
 
-            <SectionTag label="Argue your case" />
+            <label
+              htmlFor="user-argument"
+              style={{
+                display: "block",
+                fontSize: 11,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: "var(--dim)",
+                marginBottom: 14,
+                fontWeight: 700,
+              }}
+            >
+              Argue your case
+            </label>
             <textarea
+              id="user-argument"
+              aria-label="Push back on the panel, add missing context, or defend your idea"
               value={userArgument}
               onChange={(e) => setUserArgument(e.target.value)}
               placeholder="Push back on the panel, add missing context, or defend your idea..."
@@ -519,6 +549,7 @@ export default function Home() {
             <button
               onClick={sendReply}
               disabled={replyLoading || !userArgument.trim()}
+              aria-label="Submit counter-argument to the panel"
               style={{
                 background: replyLoading ? "var(--line)" : "var(--teal)",
                 color: replyLoading ? "var(--dim)" : "var(--void)",
@@ -533,7 +564,7 @@ export default function Home() {
             >
               {replyLoading ? "Panel is reconsidering..." : "Submit to the panel"}
             </button>
-          </>
+          </div>
         )}
       </main>
     </div>

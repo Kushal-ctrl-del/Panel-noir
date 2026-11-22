@@ -18,6 +18,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Say something to the panel first." }, { status: 400 });
     }
 
+    const sanitizedArgument = userArgument.trim();
+    if (sanitizedArgument.length > 1500) {
+      return NextResponse.json(
+        { error: "Argument exceeds maximum allowable length of 1500 characters." },
+        { status: 400 }
+      );
+    }
+
     const groq = getGroqClient();
 
     const MAX_HISTORY_ENTRIES = 8;

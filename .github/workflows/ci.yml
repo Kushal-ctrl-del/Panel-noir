@@ -1,0 +1,36 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    name: Code Quality, Test & Build Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Static Type & Code Quality Check
+        run: npm run lint
+
+      - name: Execute Automated Test Suite
+        run: npm test
+
+      - name: Verify Production Next.js Build
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY || 'gsk_mock_build_token_hackathon_ci' }}
+        run: npm run build

@@ -17,6 +17,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const sanitizedTopic = topic.trim();
+    if (sanitizedTopic.length > 2000) {
+      return NextResponse.json(
+        { error: "Topic exceeds maximum allowable length of 2000 characters." },
+        { status: 400 }
+      );
+    }
+
     const groq = getGroqClient();
 
     const panelistCalls = PERSONAS.map((persona) =>
